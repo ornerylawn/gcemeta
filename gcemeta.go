@@ -2,6 +2,10 @@
 // metadata. It's useful for discovering things about the machine on
 // which your process is running (e.g. instance name, project name,
 // zone).
+//
+//  meta, err := gcemeta.Get()
+//  ...
+//  fmt.Println(meta.Project.ProjectID)
 package gcemeta
 
 import (
