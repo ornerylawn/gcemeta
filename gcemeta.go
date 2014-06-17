@@ -5,7 +5,7 @@
 //
 //  meta, err := gcemeta.Get()
 //  ...
-//  fmt.Println(meta.Project.ProjectID)
+//  fmt.Println(meta.Project.ID)
 //
 // Documentation on each of the fields can be found here:
 // https://developers.google.com/compute/docs/metadata
