@@ -13,12 +13,22 @@ package gcemeta
 
 import (
 	"encoding/json"
+	"fmt"
+	"math/big"
 	"net/http"
+	"strings"
 )
 
-type Metadata struct {
+type Meta struct {
 	Instance *Instance `json:"instance"`
 	Project  *Project  `json:"project"`
+}
+
+// InstanceURL computes the fully qualified URL of the instance,
+// intended to be used with the Google Compute Engine API.
+func (m *Meta) InstanceURL() string {
+	return fmt.Sprintf("https://www.googleapis.com/compute/v1/projects/%s/zones/%s/instances/%s",
+		m.Project.ID, m.Instance.ShortZone(), m.Instance.Name())
 }
 
 type Instance struct {
@@ -26,7 +36,7 @@ type Instance struct {
 	Description       string              `json:"description"`
 	Disks             []*Disk             `json:"disks"`
 	Hostname          string              `json:"hostname"`
-	ID                int64               `json:"id"`
+	ID                *big.Int            `json:"id"`
 	Image             string              `json:"image"`
 	MachineType       string              `json:"machineType"`
 	MaintenanceEvent  string              `json:"maintenanceEvent"`
@@ -34,6 +44,25 @@ type Instance struct {
 	Scheduling        *Scheduling         `json:"scheduling"`
 	Tags              []string            `json:"tags"`
 	Zone              string              `json:"zone"`
+}
+
+// Name parses the instance's name from its hostname.
+func (i *Instance) Name() string {
+	j := strings.Index(i.Hostname, ".")
+	if j < 0 {
+		return i.Hostname
+	}
+	return i.Hostname[:j]
+}
+
+// ShortZone parses the zone for the common short representation
+// (e.g. "us-central1-a").
+func (i *Instance) ShortZone() string {
+	j := strings.LastIndex(i.Zone, "/")
+	if j < 0 {
+		return i.Zone
+	}
+	return i.Zone[j+1:]
 }
 
 type Disk struct {
@@ -61,15 +90,15 @@ type Scheduling struct {
 }
 
 type Project struct {
-	Attributes       map[string]string `json:"attributes"`
-	NumericProjectID int64             `json:"numericProjectId"`
-	ProjectID        string            `json:"projectId"`
+	Attributes map[string]string `json:"attributes"`
+	ID         string            `json:"projectId"`
+	NumericID  *big.Int          `json:"numericProjectId"`
 }
 
 const url = "http://metadata.google.internal/computeMetadata/v1/?recursive=true"
 
 // Get requests metadata from the metadata server.
-func Get() (*Metadata, error) {
+func Get() (*Meta, error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
@@ -80,7 +109,7 @@ func Get() (*Metadata, error) {
 		return nil, err
 	}
 	defer resp.Body.Close()
-	var m *Metadata
+	var m *Meta
 	if err = json.NewDecoder(resp.Body).Decode(&m); err != nil {
 		return nil, err
 	}
